@@ -4,6 +4,7 @@ import logging
 
 import functools
 import inspect
+from collections import Iterable
 
 
 def log(logger, level=logging.DEBUG):
@@ -45,3 +46,9 @@ def log(logger, level=logging.DEBUG):
         return wrapper
     return decorator
 
+
+def is_iterator(obj):
+    if isinstance(obj, Iterable) and not isinstance(obj, str):
+        return True
+    else:
+        return False
