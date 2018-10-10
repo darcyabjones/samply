@@ -53,7 +53,6 @@ class Contributors(SamplyBase):
             if isinstance(series.contact, dict):
                 record["contact"] = series.contact
             else:
-                print(series.contact)
                 record["contact"] = json.loads(series.contact)
 
         if pd.notna(series.phone):

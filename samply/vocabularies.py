@@ -6,6 +6,7 @@ enforce consistency.
 
 import enum
 
+
 class SampleType(enum.Enum):
     """ """
     mixed = enum.auto()
@@ -24,12 +25,17 @@ class SamplePermission(enum.Enum):
     unspecified = enum.auto()
     other = enum.auto()
 
+class SampleTaxonType(enum.Enum):
+    host = enum.auto()
+    pathogen = enum.auto()
+    isolate = enum.auto()
+
 
 class SampleContributionPredicate(enum.Enum):
-    collected_by = enum.auto() # field samples
-    created_by = enum.auto() # lab samples
-    owned_by = enum.auto() # e.g. DAFWA etc
-    entry_created_by = enum.auto() # keep track of database maintainers
+    collected_by = enum.auto()  # field samples
+    created_by = enum.auto()  # lab samples
+    owned_by = enum.auto()  # e.g. DAFWA etc
+    entry_created_by = enum.auto()  # keep track of database maintainers
     entry_modified_by = enum.auto()
 
 
@@ -49,8 +55,9 @@ class LocationType(enum.Enum):
     other = enum.auto()
 
 
-class LocationHistoryType(enum.Enum):
+class EnvironmentalHistoryType(enum.Enum):
     pesticide = enum.auto()
+    fungicide = enum.auto()
     fertiliser = enum.auto()
     general_chemical = enum.auto()
     tilled = enum.auto()
@@ -87,3 +94,5 @@ class DateResolution(enum.Enum):
     season = enum.auto()
     year = enum.auto()
     decade = enum.auto()
+    after = enum.auto()
+    before = enum.auto()

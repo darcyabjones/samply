@@ -103,3 +103,18 @@ class Locations(SamplyBase):
         type_ = voc.LocationType[series["type"]]
 
         return dict(geom=geom, type=type_, support=support)
+
+
+class LocationHistories(SamplyBase):
+
+    table = db.LocationHistory
+
+    @staticmethod
+    def _to_series(record):
+        return
+
+    @staticmethod
+    def _from_series(series):
+
+        return
+

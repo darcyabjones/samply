@@ -41,7 +41,7 @@ def session_scope(engine):
     try:
         yield session
         session.commit()
-    except:
+    except:  # noqa
         session.rollback()
         raise
     finally:
@@ -117,8 +117,26 @@ samplephenotype = Table(
     )
 )
 
+sampleenvironment = Table(
+    "sampleenvironment",
+    Base.metadata,
+    Column(
+        "sample_id",
+        Integer,
+        ForeignKey("sample.id"),
+        primary_key=True
+    ),
+    Column(
+        "environment_id",
+        Integer,
+        ForeignKey("environment.id"),
+        primary_key=True
+    )
+)
+
 
 class Sample(Base):
+
     """
     """
 
@@ -132,12 +150,16 @@ class Sample(Base):
     date = Column(Date())
     date_resolution = Column(Enum(vocab.DateResolution))
 
-    # e.g. host = blah, tissue= stem,...
     details = Column(JSONB(none_as_null=True))
     permission = Column(Enum(vocab.SamplePermission))
     location_id = Column(Integer, ForeignKey("location.id"))
     location = relationship("Location", back_populates="samples")
     contributions = relationship("SampleContribution", back_populates="sample")
+    environments = relationship(
+        "Environment",
+        secondary=sampleenvironment,
+        back_populates="samples"
+    )
     phenotypes = relationship(
         "Phenotype",
         secondary=samplephenotype,
@@ -150,6 +172,37 @@ class Sample(Base):
         secondaryjoin="Sample.id==sampleadjacency.c.parent_id",
         backref="children"
     )
+    taxon = relationship("SampleTaxon", back_populates="sample")
+
+
+class Environment(Base):
+    type = Column(Enum(vocab.EnvironmentalHistoryType))
+    date = Column(Date())  # Split into multiple columns?
+    date_resolution = Column(Enum(vocab.DateResolution))
+    # {fungicide: , rates: , units: "mg/Ha"}
+    details = Column(JSONB(none_as_null=True))
+    samples = relationship(
+        "Sample",
+        secondary=sampleenvironment,
+        back_populates="environments"
+    )
+
+
+class SampleTaxon(Base):
+    sample_id = Column(Integer, ForeignKey("sample.id"), primary_key=True)
+    taxon_id = Column(Integer, ForeignKey("taxon.id"), primary_key=True)
+    type = Column(Enum(vocab.SampleContributionPredicate))
+    evidence = Column(JSONB(none_as_null=True))
+    sample = relationship("Sample", back_populates="taxon")
+    taxon = relationship("Taxon", back_populates="samples")
+
+
+class Taxon(Base):
+    rank = Column(String())
+    name = Column(String())
+    alt_names = Column(JSONB(none_as_null=True))
+    taxid = Column(Integer())
+    parent_taxid = Column(Integer)
 
 
 class SampleContribution(Base):
@@ -182,8 +235,9 @@ class Location(Base):
 
 
 class LocationHistory(Base):
-    type = Column(Enum(vocab.LocationHistoryType))
+    type = Column(Enum(vocab.EnvironmentalHistoryType))
     date = Column(Date())  # Split into multiple columns?
+    date_resolution = Column(Enum(vocab.DateResolution))
     # {fungicide: , rates: , units: "mg/Ha"}
     details = Column(JSONB(none_as_null=True))
     location_id = Column(Integer, ForeignKey("location.id"))
