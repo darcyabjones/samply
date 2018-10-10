@@ -12,6 +12,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import create_engine
 from sqlalchemy import Column
 from sqlalchemy import Integer
+from sqlalchemy import Float
 from sqlalchemy import String
 # from sqlalchemy import Boolean
 from sqlalchemy import Enum
@@ -191,7 +192,7 @@ class Environment(Base):
 class SampleTaxon(Base):
     sample_id = Column(Integer, ForeignKey("sample.id"), primary_key=True)
     taxon_id = Column(Integer, ForeignKey("taxon.id"), primary_key=True)
-    type = Column(Enum(vocab.SampleContributionPredicate))
+    type = Column(Enum(vocab.SampleTaxonType))
     evidence = Column(JSONB(none_as_null=True))
     sample = relationship("Sample", back_populates="taxon")
     taxon = relationship("Taxon", back_populates="samples")
@@ -204,6 +205,14 @@ class Taxon(Base):
     taxid = Column(Integer())
     parent_taxid = Column(Integer)
 
+
+class SamplePesticide(Base):
+
+
+
+class Pesticide(Base):
+    name = Column(String())
+    form = Column(Enum(vocab.PesticideForm))
 
 class SampleContribution(Base):
     sample_id = Column(Integer, ForeignKey("sample.id"), primary_key=True)

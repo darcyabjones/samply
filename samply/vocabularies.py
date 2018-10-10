@@ -8,7 +8,6 @@ import enum
 
 
 class SampleType(enum.Enum):
-    """ """
     mixed = enum.auto()
     sample = enum.auto()
     mutant = enum.auto()
@@ -24,6 +23,7 @@ class SamplePermission(enum.Enum):
     commercial_paid = enum.auto()
     unspecified = enum.auto()
     other = enum.auto()
+
 
 class SampleTaxonType(enum.Enum):
     host = enum.auto()
@@ -96,3 +96,9 @@ class DateResolution(enum.Enum):
     decade = enum.auto()
     after = enum.auto()
     before = enum.auto()
+
+
+class PesticideForm(enum.Enum):
+    liquid = enum.auto()
+    powder = enum.auto()
+    coating = enum.auto()
