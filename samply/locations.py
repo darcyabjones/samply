@@ -82,11 +82,12 @@ class Locations(SamplyBase):
 
     @staticmethod
     def _from_series(series):
-
         if isinstance(series["support"], dict):
             support = series["support"]
-        else:
+        elif isinstance(series["support"], str):
             support = json.loads(series.get("support", "{}"))
+        else:
+            support = {}
 
         for field in ("street_address", "suburb", "state", "country", "name"):
             if pd.notna(series[field]):
@@ -101,7 +102,6 @@ class Locations(SamplyBase):
             geom = point_to_poly(series["lat"], series["lon"])
 
         type_ = voc.LocationType[series["type"]]
-
         return dict(geom=geom, type=type_, support=support)
 
 
@@ -117,4 +117,3 @@ class LocationHistories(SamplyBase):
     def _from_series(series):
 
         return
-

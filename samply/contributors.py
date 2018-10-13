@@ -5,10 +5,8 @@ import json
 import logging
 
 import pandas as pd
-from samply import vocabularies as voc
 from samply import database as db
 from samply.base import SamplyBase
-from samply import utils
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +50,10 @@ class Contributors(SamplyBase):
         if pd.notna(series.contact):
             if isinstance(series.contact, dict):
                 record["contact"] = series.contact
-            else:
+            elif isinstance(series.contact, str):
                 record["contact"] = json.loads(series.contact)
+            else:
+                record["contact"] = {}
 
         if pd.notna(series.phone):
             record["contact"]["phone"] = str(series.phone)

@@ -1,5 +1,4 @@
 """
-Functions to count the number of specific classes of CAZymes.
 """
 
 from __future__ import unicode_literals
@@ -118,21 +117,11 @@ samplephenotype = Table(
     )
 )
 
-sampleenvironment = Table(
-    "sampleenvironment",
-    Base.metadata,
-    Column(
-        "sample_id",
-        Integer,
-        ForeignKey("sample.id"),
-        primary_key=True
-    ),
-    Column(
-        "environment_id",
-        Integer,
-        ForeignKey("environment.id"),
-        primary_key=True
-    )
+
+pesticideadjacency = Table(
+    "pesticideadjacency", Base.metadata,
+    Column("child_id", Integer, ForeignKey("pesticide.id"), primary_key=True),
+    Column("parent_id", Integer, ForeignKey("pesticide.id"), primary_key=True)
 )
 
 
@@ -156,11 +145,6 @@ class Sample(Base):
     location_id = Column(Integer, ForeignKey("location.id"))
     location = relationship("Location", back_populates="samples")
     contributions = relationship("SampleContribution", back_populates="sample")
-    environments = relationship(
-        "Environment",
-        secondary=sampleenvironment,
-        back_populates="samples"
-    )
     phenotypes = relationship(
         "Phenotype",
         secondary=samplephenotype,
@@ -174,19 +158,7 @@ class Sample(Base):
         backref="children"
     )
     taxon = relationship("SampleTaxon", back_populates="sample")
-
-
-class Environment(Base):
-    type = Column(Enum(vocab.EnvironmentalHistoryType))
-    date = Column(Date())  # Split into multiple columns?
-    date_resolution = Column(Enum(vocab.DateResolution))
-    # {fungicide: , rates: , units: "mg/Ha"}
-    details = Column(JSONB(none_as_null=True))
-    samples = relationship(
-        "Sample",
-        secondary=sampleenvironment,
-        back_populates="environments"
-    )
+    pesticides = relationship("SamplePesticide", back_populates="sample")
 
 
 class SampleTaxon(Base):
@@ -203,16 +175,37 @@ class Taxon(Base):
     name = Column(String())
     alt_names = Column(JSONB(none_as_null=True))
     taxid = Column(Integer())
-    parent_taxid = Column(Integer)
+    parent_taxid = Column(Integer())
+    samples = relationship("SampleTaxon", back_populates="taxon")
 
 
 class SamplePesticide(Base):
-
+    sample_id = Column(Integer, ForeignKey("sample.id"), primary_key=True)
+    pesticide_id = Column(
+        Integer,
+        ForeignKey("pesticide.id"),
+        primary_key=True
+    )
+    date = Column(Date())  # Split into multiple columns?
+    date_resolution = Column(Enum(vocab.DateResolution))
+    rate = Column(Float())
+    units = Column(String())
+    sample = relationship("Sample", back_populates="pesticides")
+    pesticide = relationship("Pesticide", back_populates="samples")
 
 
 class Pesticide(Base):
     name = Column(String())
-    form = Column(Enum(vocab.PesticideForm))
+    samples = relationship("SamplePesticide", back_populates="pesticide")
+
+    parents = relationship(
+        "Pesticide",
+        secondary=pesticideadjacency,
+        primaryjoin="Pesticide.id==pesticideadjacency.c.child_id",
+        secondaryjoin="Pesticide.id==pesticideadjacency.c.parent_id",
+        backref="children"
+    )
+
 
 class SampleContribution(Base):
     sample_id = Column(Integer, ForeignKey("sample.id"), primary_key=True)

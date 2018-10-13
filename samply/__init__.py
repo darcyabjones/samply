@@ -11,6 +11,7 @@ from samply.cli import cli  # noqa
 from samply.database import init  # noqa
 from samply.locations import Locations  # noqa
 from samply.contributors import Contributors  # noqa
+from samply.taxon import Taxon  # noqa
 from samply import utils  # noqa
 
 logger = logging.getLogger("samply")
@@ -49,8 +50,10 @@ def main():
 def get_table(table):
     if table in ("loc", "locations"):
         return Locations
-    elif table in ("cont", "contributors"):
+    elif table in ("contr", "contributors"):
         return Contributors
+    elif table == "taxon":
+        return Taxon
     else:
         raise ValueError("No table provided")
         return table
@@ -60,7 +63,6 @@ def get_table(table):
 def run_add(args):
     engine = create_engine(args.db)
 
-    print(args.table)
     table = get_table(args.table)
 
     tab = table(engine)

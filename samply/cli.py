@@ -78,7 +78,7 @@ def cli_add(parser):
     add.add_argument(
         "table",
         type=str,
-        choices=["locations", "loc", "contributors", "contr"],
+        choices=["locations", "loc", "contributors", "contr", "taxon"],
         help=""
     )
     add.add_argument(
@@ -94,7 +94,7 @@ def cli_dump(parser):
     dump.add_argument(
         "table",
         type=str,
-        choices=["locations", "loc", "contributors", "contr"],
+        choices=["locations", "loc", "contributors", "contr", "taxon"],
         help=""
     )
     dump.add_argument(
