@@ -21,6 +21,7 @@ from sqlalchemy import DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -32,6 +33,9 @@ from samply import vocabularies as vocab
 
 logger = logging.getLogger(__name__)
 logger.debug("Loaded module.")
+
+
+SAMPLE_ID_SIZE = 10
 
 
 @contextmanager
@@ -63,7 +67,7 @@ class BaseTable(object):
         return cls.__name__.lower()
 
     # Always have dedicated primary key
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    # id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Give some sane defaults for printing.
     def __repr__(self):
@@ -90,31 +94,14 @@ Normally you wouldn't interact with this table directly
 """
 sampleadjacency = Table(
     "sampleadjacency", Base.metadata,
-    Column("child_id", Integer, ForeignKey("sample.id"), primary_key=True),
-    Column("parent_id", Integer, ForeignKey("sample.id"), primary_key=True)
-)
-
-
-"""
-We use another adjacency table to map a many to many relationship between
-samples and phenotypes. Again, you would use the sample or phenotype tables
-to actually interact this just handles it behind the scenes.
-"""
-samplephenotype = Table(
-    "samplephenotype",
-    Base.metadata,
-    Column(
-        "sample_id",
-        Integer,
-        ForeignKey("sample.id"),
-        primary_key=True
-    ),
-    Column(
-        "phenotype_id",
-        Integer,
-        ForeignKey("phenotype.id"),
-        primary_key=True
-    )
+    Column("child_id",
+           String(SAMPLE_ID_SIZE),
+           ForeignKey("sample.id"),
+           primary_key=True),
+    Column("parent_id",
+           String(SAMPLE_ID_SIZE),
+           ForeignKey("sample.id"),
+           primary_key=True)
 )
 
 
@@ -130,26 +117,22 @@ class Sample(Base):
     """
     """
 
-    name = Column(String(50), index=True, nullable=False, unique=True)
-    alt_names = Column(JSONB(none_as_null=True))  # Array
+    id = Column(String(SAMPLE_ID_SIZE), primary_key=True)
+    names = Column(JSONB(none_as_null=True))  # Array
     type = Column(Enum(vocab.SampleType))
-
-    taxon = Column(JSONB(none_as_null=True))  # Bunch of dbxrefs
-    taxon_evidence = Column(JSONB(none_as_null=True))
 
     date = Column(Date())
     date_resolution = Column(Enum(vocab.DateResolution))
 
     details = Column(JSONB(none_as_null=True))
     permission = Column(Enum(vocab.SamplePermission))
-    location_id = Column(Integer, ForeignKey("location.id"))
-    location = relationship("Location", back_populates="samples")
+
+    geom = Column(Geometry(geometry_type="POLYGON", srid=4326))
+    location_type = Column(Enum(vocab.LocationType))
+    location_support = Column(JSONB(none_as_null=True))  # address?, postcode?
+
     contributions = relationship("SampleContribution", back_populates="sample")
-    phenotypes = relationship(
-        "Phenotype",
-        secondary=samplephenotype,
-        back_populates="samples"
-    )
+    phenotypes = relationship("Phenotype", back_populates="sample")
     parents = relationship(
         "Sample",
         secondary=sampleadjacency,
@@ -162,8 +145,11 @@ class Sample(Base):
 
 
 class SampleTaxon(Base):
-    sample_id = Column(Integer, ForeignKey("sample.id"), primary_key=True)
-    taxon_id = Column(Integer, ForeignKey("taxon.id"), primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sample_id = Column(String(SAMPLE_ID_SIZE),
+                       ForeignKey("sample.id"),
+                       primary_key=True)
+    taxon_id = Column(Integer, ForeignKey("taxon.taxid"), primary_key=True)
     type = Column(Enum(vocab.SampleTaxonType))
     evidence = Column(JSONB(none_as_null=True))
     sample = relationship("Sample", back_populates="taxon")
@@ -171,16 +157,23 @@ class SampleTaxon(Base):
 
 
 class Taxon(Base):
-    rank = Column(String())
+    taxid = Column(Integer, primary_key=True)
     name = Column(String())
+    rank = Column(String())
     alt_names = Column(JSONB(none_as_null=True))
-    taxid = Column(Integer())
-    parent_taxid = Column(Integer())
+    parent_taxid = Column(Integer, ForeignKey("taxon.taxid"))
     samples = relationship("SampleTaxon", back_populates="taxon")
+    children = relationship("Taxon",
+                            backref=backref("parent", remote_side=[taxid]))
 
 
 class SamplePesticide(Base):
-    sample_id = Column(Integer, ForeignKey("sample.id"), primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sample_id = Column(
+        String(SAMPLE_ID_SIZE),
+        ForeignKey("sample.id"),
+        primary_key=True
+    )
     pesticide_id = Column(
         Integer,
         ForeignKey("pesticide.id"),
@@ -195,9 +188,13 @@ class SamplePesticide(Base):
 
 
 class Pesticide(Base):
-    name = Column(String())
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(), index=True, unique=True)
     samples = relationship("SamplePesticide", back_populates="pesticide")
-
+    pesticide_type = Column(JSONB(none_as_null=True))
+    type = Column(Enum(vocab.PesticideProductType))
+    group = Column(JSONB(none_as_null=True))
+    notes = Column(String())
     parents = relationship(
         "Pesticide",
         secondary=pesticideadjacency,
@@ -208,7 +205,12 @@ class Pesticide(Base):
 
 
 class SampleContribution(Base):
-    sample_id = Column(Integer, ForeignKey("sample.id"), primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sample_id = Column(
+        String(SAMPLE_ID_SIZE),
+        ForeignKey("sample.id"),
+        primary_key=True
+    )
     contributor_id = Column(
         Integer,
         ForeignKey("contributor.id"),
@@ -221,6 +223,7 @@ class SampleContribution(Base):
 
 
 class Contributor(Base):
+    id = Column(Integer, primary_key=True, autoincrement=True)
     type = Column(Enum(vocab.ContributorType))
     name = Column(String())
     # Address, email, phone, twitter etc.
@@ -228,15 +231,11 @@ class Contributor(Base):
     samples = relationship("SampleContribution", back_populates="contributor")
 
 
-class Location(Base):
-    geom = Column(Geometry(geometry_type="POLYGON", srid=4326))
-    type = Column(Enum(vocab.LocationType))
-    support = Column(JSONB(none_as_null=True))  # address?, postcode?,
-    samples = relationship("Sample", back_populates="location")
-    history = relationship("LocationHistory", back_populates="location")
-
-
 class LocationHistory(Base):
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    geom = Column(Geometry(geometry_type="POLYGON", srid=4326))
+    location_type = Column(Enum(vocab.LocationType))
+    location_support = Column(JSONB(none_as_null=True))  # address?, postcode?,
     type = Column(Enum(vocab.EnvironmentalHistoryType))
     date = Column(Date())  # Split into multiple columns?
     date_resolution = Column(Enum(vocab.DateResolution))
@@ -247,11 +246,9 @@ class LocationHistory(Base):
 
 
 class Phenotype(Base):
+    id = Column(Integer, primary_key=True, autoincrement=True)
     type = Column(Enum(vocab.PhenotypeType))
     date = Column(Date())
     details = Column(JSONB(none_as_null=True))
-    samples = relationship(
-        "Sample",
-        secondary=samplephenotype,
-        back_populates="phenotypes"
-    )
+    sample_id = Column(String(SAMPLE_ID_SIZE), ForeignKey("sample.id"))
+    sample = relationship("Sample", back_populates="phenotypes")

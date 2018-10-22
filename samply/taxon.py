@@ -49,9 +49,21 @@ class Taxon(SamplyBase):
             name=series["name"],
             alt_names=alt_names,
             taxid=series["taxid"],
-            parent_taxid=None,  # series["parent_taxid"],
+            parent_taxid=series["parent_taxid"],
             rank=series["rank"],
         )
+
+    def add_records(self, records):
+        nodes = dict()
+        for record in records:
+            node = self.table(**record)
+            nodes[node.taxid] = node
+
+        for node in nodes.values():
+            nodes[node.parent_taxid].children.append(node)
+
+        with self.get_session() as session:
+            session.add_all(nodes.values())
 
 
 class SampleTaxon(SamplyBase):
@@ -69,7 +81,7 @@ class SampleTaxon(SamplyBase):
             record.taxon.name,
             record.type.name,
             json.dumps(record.evidence)
-            ]
+        ]
 
         names = [
             "sample",

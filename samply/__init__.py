@@ -44,6 +44,7 @@ def main():
     else:
         print("NO SUBCOMMAND USED")
         print(args)
+        sys.exit(1)
 
 
 @utils.log(logger, logging.DEBUG)

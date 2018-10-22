@@ -98,7 +98,15 @@ class DateResolution(enum.Enum):
     before = enum.auto()
 
 
-class PesticideForm(enum.Enum):
-    liquid = enum.auto()
-    powder = enum.auto()
-    coating = enum.auto()
+class PesticideType(enum.Enum):
+    fungicide = enum.auto()
+    insecticide = enum.auto()
+    herbicide = enum.auto()
+    adjuvant = enum.auto()
+
+
+class PesticideProductType(enum.Enum):
+    product = enum.auto()
+    active_ingredient = enum.auto()
+    chemical_class = enum.auto()
+    adjuvant = enum.auto()
