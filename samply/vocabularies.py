@@ -110,3 +110,13 @@ class PesticideProductType(enum.Enum):
     active_ingredient = enum.auto()
     chemical_class = enum.auto()
     adjuvant = enum.auto()
+
+
+class PesticideApplication(enum.Enum):
+    foliar = enum.auto()
+    seed_treatment = enum.auto()
+    with_fertilizer = enum.auto()
+    in_furrow = enum.auto()
+    injection = enum.auto()
+    painted = enum.auto()
+    unknown = enum.auto()

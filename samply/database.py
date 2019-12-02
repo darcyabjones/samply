@@ -183,6 +183,9 @@ class SamplePesticide(Base):
     date_resolution = Column(Enum(vocab.DateResolution))
     rate = Column(Float())
     units = Column(String())
+    application_style = Column(Enum(vocab.PesticideApplication))
+    stage_applied = Column(String())
+    notes = Column(String())
     sample = relationship("Sample", back_populates="pesticides")
     pesticide = relationship("Pesticide", back_populates="samples")
 
@@ -241,8 +244,6 @@ class LocationHistory(Base):
     date_resolution = Column(Enum(vocab.DateResolution))
     # {fungicide: , rates: , units: "mg/Ha"}
     details = Column(JSONB(none_as_null=True))
-    location_id = Column(Integer, ForeignKey("location.id"))
-    location = relationship("Location", back_populates="history")
 
 
 class Phenotype(Base):

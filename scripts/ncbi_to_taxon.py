@@ -26,6 +26,14 @@ def cli(prog, args):
     )
 
     parser.add_argument(
+        "-c", "--custom",
+        required=False,
+        type=argparse.FileType('r'),
+        default=None,
+        help="custom taxon names, use negative integers.",
+    )
+
+    parser.add_argument(
         "-o", "--out",
         type=argparse.FileType('w'),
         default=sys.stdout,
@@ -75,6 +83,14 @@ def main():
     taxon = merged.groupby(["taxid", "parent_taxid", "rank"]).apply(appl)
     taxon.reset_index(inplace=True, drop=False)
     taxon["alt_names"] = taxon["alt_names"]
+
+    if args.custom is not None:
+        custom_taxon = pd.read_table(args.custom, sep="\t")
+        for taxid in custom_taxon["parent_taxid"]:
+            if taxid not in taxon["taxid"]:
+                raise KeyError(f"Parent {taxid} from custom set doesn't exist")
+        taxon = pd.concat([taxon, custom_taxon])
+
     taxon.to_csv(args.out, sep="\t", index=False)
     return
 

@@ -9,9 +9,13 @@ from sqlalchemy import create_engine  # noqa
 
 from samply.cli import cli  # noqa
 from samply.database import init  # noqa
-from samply.locations import Locations  # noqa
 from samply.contributors import Contributors  # noqa
+from samply.contributors import SampleContribution  # noqa
 from samply.taxon import Taxon  # noqa
+from samply.taxon import SampleTaxon  # noqa
+from samply.samples import Samples  # noqa
+from samply.pesticides import Pesticide  # noqa
+from samply.pesticides import SamplePesticide  # noqa
 from samply import utils  # noqa
 
 logger = logging.getLogger("samply")
@@ -49,15 +53,22 @@ def main():
 
 @utils.log(logger, logging.DEBUG)
 def get_table(table):
-    if table in ("loc", "locations"):
-        return Locations
+    if table == "samples":
+        return Samples
     elif table in ("contr", "contributors"):
         return Contributors
+    elif table == "samplecontribution":
+        return SampleContribution
     elif table == "taxon":
         return Taxon
+    elif table == "sampletaxon":
+        return SampleTaxon
+    elif table == "pesticides":
+        return Pesticide
+    elif table == "samplepesticides":
+        return SamplePesticide
     else:
         raise ValueError("No table provided")
-        return table
 
 
 @utils.log(logger, logging.DEBUG)

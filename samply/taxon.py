@@ -3,8 +3,10 @@
 
 import logging
 import json
+from collections import defaultdict
 import pandas as pd
 
+from samply import utils
 from samply import database as db
 from samply.base import SamplyBase
 
@@ -14,6 +16,7 @@ logger = logging.getLogger(__name__)
 class Taxon(SamplyBase):
 
     """
+    Serialise and deserialise taxonomy database.
     """
 
     table = db.Taxon
@@ -54,21 +57,39 @@ class Taxon(SamplyBase):
         )
 
     def add_records(self, records):
-        nodes = dict()
+        """ Recursively add records to database """
+
+        logger.info("Processing taxon file.")
+
+        root = None
+        nodes = defaultdict(list)
         for record in records:
+            record = utils.tidy_nans(record)
             node = self.table(**record)
-            nodes[node.taxid] = node
+            if node.taxid == 1:
+                root = node
+            else:
+                nodes[node.parent_taxid].append(node)
 
-        for node in nodes.values():
-            nodes[node.parent_taxid].children.append(node)
+        logger.info("Constructing tree.")
 
+        def recurse(node, memo):
+            for child in memo[node.taxid]:
+                node.children.append(recurse(child, memo))
+            return node
+
+        tree = recurse(root, nodes)
+
+        logger.info("Adding to database.")
         with self.get_session() as session:
-            session.add_all(nodes.values())
+            session.add(tree)
+        return
 
 
 class SampleTaxon(SamplyBase):
 
     """
+    Serialise and deserialise sample taxon database.
     """
 
     table = db.SampleTaxon
@@ -77,15 +98,15 @@ class SampleTaxon(SamplyBase):
     def _to_series(record):
 
         data = [
-            record.sample.name,
-            record.taxon.name,
+            record.sample.id,
+            record.taxon.taxid,
             record.type.name,
             json.dumps(record.evidence)
         ]
 
         names = [
-            "sample",
-            "taxon",
+            "sample_id",
+            "taxid",
             "type",
             "evidence"
         ]
@@ -99,8 +120,28 @@ class SampleTaxon(SamplyBase):
             evidence = []
 
         return dict(
-            sample=series["sample"],
-            taxon=series["taxon"],
+            sample_id=series["sample_id"],
+            taxid=series["taxid"],
             type=series["type"],
             evidence=evidence
         )
+
+    def add_records(self, records):
+        """ Recursively add records to database """
+
+        with self.get_session() as session:
+            for record in records:
+                taxid = record.pop("taxid")
+                sample_id = record.pop("sample_id")
+
+                record = utils.tidy_nans(record)
+                sample = session.query(db.Sample).filter(
+                    db.Sample.id == sample_id).one()
+                taxon = session.query(db.Taxon).filter(
+                    db.Taxon.taxid == taxid).one()
+
+                record["taxon"] = taxon
+                record["sample"] = sample
+                record = self.table(**record)
+                session.add(record)
+        return

@@ -3,6 +3,8 @@
 
 import json
 import logging
+from collections import defaultdict
+from datetime import datetime
 
 import pandas as pd
 from geoalchemy2 import shape
@@ -24,9 +26,27 @@ def point_to_poly(n, e, d=0.5):
     return "SRID=4326;" + y.wkt
 
 
+def json_serialise(val):
+    if isinstance(val, str):
+        return json.loads(val)
+    elif isinstance(val, dict):
+        return val
+    else:
+        return {}
+
+
+def array_serialise(val):
+    if isinstance(val, str):
+        return val.split(";")
+    elif isinstance(val, list):
+        return val
+    else:
+        return []
+
+
 class Samples(SamplyBase):
 
-    table = db.Samples
+    table = db.Sample
 
     @staticmethod
     def _to_series(record):
@@ -34,7 +54,7 @@ class Samples(SamplyBase):
             record.id,
             ";".join(record.names),
             record.type.name,
-            record.date,
+            record.date.strftime("%Y-%m-%d"),
             record.date_resolution.name,
             json.dumps(record.details),
             record.permission.name,
@@ -50,7 +70,7 @@ class Samples(SamplyBase):
             json.dumps({
                 k: v
                 for k, v
-                in record.location_support
+                in record.location_support.items()
                 if k not in ("street_address", "suburb", "state", "country")
             }),
         ]
@@ -61,9 +81,9 @@ class Samples(SamplyBase):
             "type",
             "date",
             "date_resolution",
-            "details"
+            "details",
             "permission",
-            "parents"
+            "parents",
             "geom",
             "location_type",
             "latitude",
@@ -74,51 +94,71 @@ class Samples(SamplyBase):
             "country",
             "location_support",
         ]
-
         return pd.Series(data, index=names)
 
     @staticmethod
     def _from_series(series):
         record = {}
-        if isinstance(series["names"], str):
-            record["names"] = series["names"].split(";")
-        elif isinstance(series["names"], list):
-            record["names"] = series["names"]
-        else:
-            record["names"] = []
-
-        record["date"] = series["date"]
+        record["id"] = series["id"]
+        record["type"] = series["type"]
+        record["names"] = array_serialise(series["names"])
+        record["date"] = datetime.strptime(series["date"], "%Y-%m-%d").date()
         record["date_resolution"] = voc.DateResolution[
             series["date_resolution"]]
-        record["details"] = json.loads(series["details"])
+        record["details"] = json_serialise(series["details"])
         record["permission"] = voc.SamplePermission[series["permission"]]
-
-        if isinstance(series["parents"], str):
-            record["parents"] = series["parents"].split(";")
-        elif isinstance(series["parents"], list):
-            record["parents"] = series["parents"]
-        else:
-            record["parents"] = []
-
-        if isinstance(series["location_support"], dict):
-            location_support = series["location_support"]
-        elif isinstance(series["location_support"], str):
-            location_support = json.loads(series.get("location_support", "{}"))
-        else:
-            location_support = {}
+        record["parents"] = array_serialise(series["parents"])
+        location_support = json_serialise(series["location_support"])
 
         for field in ("latitude", "longitude", "street_address",
                       "suburb", "state", "country"):
             if pd.notna(series[field]):
                 location_support[field] = series[field]
 
-        record["names"] = location_support
+        for field in ("latitude", "longitude"):
+            if pd.notna(series[field]):
+                location_support[field] = float(series[field])
+
+        record["location_support"] = location_support
 
         if pd.notna(series["geom"]):
             record["geom"] = series["geom"]
         else:
-            record["geom"] = point_to_poly(series["latitude"],
-                                           series["longitude"])
+            record["geom"] = point_to_poly(
+                location_support["latitude"],
+                location_support["longitude"]
+            )
 
         record["location_type"] = voc.LocationType[series["location_type"]]
+        if record["id"] in record["parents"]:
+            raise ValueError("{} is present as child and parent".format(
+                record["id"]))
         return record
+
+    def add_records(self, records):
+        """ Recursively add records to database """
+
+        logger.info("Processing taxon file.")
+
+        roots = []
+        nodes = defaultdict(list)
+        for record in records:
+            parents = record.pop("parents")
+            record = utils.tidy_nans(record)
+            node = self.table(**record)
+            if pd.isna(parents) or len(parents) == 0:
+                roots.append(node)
+            else:
+                for parent in parents:
+                    nodes[parent].append(node)
+
+        def recurse(node, memo):
+            for child in memo[node.id]:
+                node.children.append(recurse(child, memo))
+            return node
+
+        tree = [recurse(root, nodes) for root in roots]
+
+        with self.get_session() as session:
+            session.add_all(tree)
+        return

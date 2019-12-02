@@ -6,6 +6,8 @@ import functools
 import inspect
 from collections import Iterable
 
+import pandas as pd
+
 
 def log(logger, level=logging.DEBUG):
     """ A decorator function to automatically log function calls.
@@ -52,3 +54,17 @@ def is_iterator(obj):
         return True
     else:
         return False
+
+
+def tidy_nans(d):
+    output = {}
+    for k, v in d.items():
+        if is_iterator(v):
+            output[k] = v
+            continue
+
+        if pd.isna(v) or pd.isnull(v):
+            output[k] = None
+        else:
+            output[k] = v
+    return output

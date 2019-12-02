@@ -10,6 +10,9 @@ from samply import __version__
 
 logger = logging.getLogger("cli")
 
+TABLES = ["contributors", "contr", "taxon", "samples", "pesticides",
+          "sampletaxon", "samplepesticides", "samplecontribution"]
+
 
 @utils.log(logger, logging.DEBUG)
 def cli(prog, args):
@@ -78,7 +81,7 @@ def cli_add(parser):
     add.add_argument(
         "table",
         type=str,
-        choices=["locations", "loc", "contributors", "contr", "taxon"],
+        choices=TABLES,
         help=""
     )
     add.add_argument(
@@ -94,7 +97,7 @@ def cli_dump(parser):
     dump.add_argument(
         "table",
         type=str,
-        choices=["locations", "loc", "contributors", "contr", "taxon"],
+        choices=TABLES,
         help=""
     )
     dump.add_argument(
@@ -104,55 +107,3 @@ def cli_dump(parser):
         help="The file that you want to dump to. Default = stdout",
     )
     return dump
-
-
-"""
-    # For file IO we're using some special syntax from argparse.
-    # Rather than having to open and close the files, handle exceptions, or
-    # check that the files exist, we just let argparse do all of that for us.
-    # It also enables the standard alias for stdin/stdout '-' by default.
-    parser.add_argument(
-        "-1", "--seq1",
-        required=True,
-        type=argparse.FileType('r'),
-        help="FASTA file 1. Use '-' for stdin.",
-        )
-
-    parser.add_argument(
-        "-2", "--seq2",
-        required=True,
-        type=argparse.FileType('r'),
-        help="FASTA file 2. Use '-' for stdin.",
-        )
-
-    parser.add_argument(
-        "-o", "--output",
-        type=argparse.FileType('w'),
-        default=sys.stdout,
-        help="Output fasta file path. Default stdout.",
-        )
-
-    parser.add_argument(
-        "-m", "--match-score",
-        dest="match_score",
-        type=float,
-        default=1,
-        help="The score to assign for matching base pairs. Default = 1."
-        )
-
-    parser.add_argument(
-        "-n", "--mismatch-score",
-        dest="mismatch_score",
-        type=float,
-        default=-1,
-        help="The score to assign for mis-matching base pairs. Default = -1."
-        )
-
-    parser.add_argument(
-        "-i", "--indel-score",
-        dest="indel_score",
-        type=float,
-        default=-1,
-        help="The score to assign for a gap insertion. Default = -1."
-        )
-        """

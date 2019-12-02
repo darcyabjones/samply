@@ -3,6 +3,7 @@
 
 import pandas as pd
 
+from samply import utils
 from samply import database as db
 
 
@@ -18,7 +19,7 @@ class SamplyBase(object):
     def dump(self):
         with self.get_session() as session:
             records = session.query(self.table).all()
-            rows = [self.record_to_series(r) for r in records]
+            rows = [self._to_series(r) for r in records]
 
         return pd.DataFrame.from_records(rows)
 
@@ -41,6 +42,7 @@ class SamplyBase(object):
 
         for i, loc in table.iterrows():
             this_loc = self._from_series(loc)
+            this_loc = utils.tidy_nans(this_loc)
             records.append(this_loc)
 
         self.add_records(records)
